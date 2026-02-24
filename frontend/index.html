@@ -176,7 +176,7 @@ User: I spend hours every week chasing subcontractors for compliance documents.
 Me: What happens if they're late?
 
 User: Projects get delayed and I look bad to the client. It's stressful."></textarea>
-            <button onclick="submitConversation()" id="submitBtn">Analyze Conversation</button>
+            <button type="button" onclick="submitConversation()" id="submitBtn">Analyze Conversation</button>
             <div class="loading" id="loading">Processing...</div>
             <div class="result" id="result"></div>
         </div>
@@ -188,7 +188,7 @@ User: Projects get delayed and I look bad to the client. It's stressful."></text
             </p>
             <input type="file" id="fileInput" accept=".txt,.json,.csv" style="margin-bottom: 10px;">
             <br>
-            <button onclick="uploadFile()" id="uploadBtn">Upload & Analyze</button>
+            <button type="button" onclick="uploadFile()" id="uploadBtn">Upload & Analyze</button>
         </div>
         
         <div class="card">
@@ -199,7 +199,7 @@ User: Projects get delayed and I look bad to the client. It's stressful."></text
             <p style="font-size: 13px; color: #888; margin-bottom: 15px;">
                 Searches: r/startups, r/smallbusiness, r/entrepreneur, r/SaaS, r/SideProject
             </p>
-            <button onclick="scrapeReddit()" id="scrapeBtn" class="scrape-btn">
+            <button type="button" onclick="scrapeReddit()" id="scrapeBtn" class="scrape-btn">
                 🔍 Auto-Scrape Reddit for Pain Points
             </button>
             <div class="loading" id="scrapeLoading" style="margin-top: 15px;">
@@ -274,7 +274,7 @@ User: Projects get delayed and I look bad to the client. It's stressful."></text
                         ID: ${data.id}<br>
                         Messages extracted: ${data.message_count}<br>
                         <br>
-                        <a href="topics.html?conv=${data.id}">View extracted topics →</a>
+                        <a href="/topics.html?conv=${data.id}">View extracted topics →</a>
                     `;
                     result.classList.remove('error');
                     loadStats();
