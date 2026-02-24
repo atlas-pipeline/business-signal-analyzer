@@ -34,6 +34,15 @@ from pipeline.reddit_scraper import RedditAutoScraper
 # Initialize
 app = FastAPI(title="Business Signal Analyzer", version="1.0.0")
 
+# Global exception handler to ensure JSON responses
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc), "type": "internal_error"}
+    )
+
 # CORS for frontend
 app.add_middleware(
     CORSMiddleware,
@@ -211,9 +220,18 @@ async def create_topic_endpoint(
 @app.get("/api/topics")
 async def list_topics_endpoint(conversation_id: Optional[int] = None):
     """List topics, optionally filtered by conversation."""
-    if conversation_id:
-        return get_topics_by_conversation(conversation_id)
-    return []  # TODO: add get_all_topics()
+    try:
+        if conversation_id:
+            # Verify conversation exists
+            conv = get_conversation(conversation_id)
+            if not conv:
+                raise HTTPException(status_code=404, detail=f"Conversation {conversation_id} not found")
+            return get_topics_by_conversation(conversation_id)
+        return []  # TODO: add get_all_topics()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Demand signal endpoints
 @app.post("/api/demand/collect")
