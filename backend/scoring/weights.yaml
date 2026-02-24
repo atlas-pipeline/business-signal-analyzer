@@ -1,0 +1,19 @@
+# Scoring Weights Configuration
+# Adjust these to change how business ideas are ranked
+# All weights must sum to 1.0 (will be normalized if not)
+
+weights:
+  demand_strength: 0.25      # Volume of mentions/signals
+  demand_velocity: 0.20      # Growth trend / recency
+  competition_proxy: 0.15    # Market saturation (inverse - low comp = high score)
+  feasibility: 0.20          # Build complexity and risk
+  automation_friendly: 0.10  # Can it run with low oversight
+  monetization_clarity: 0.10 # Clear pricing model and willing buyer
+
+# Scoring notes:
+# - demand_strength: Raw volume of search results, posts, mentions
+# - demand_velocity: Trend direction (growing = higher score)
+# - competition_proxy: Estimated saturation based on existing solutions
+# - feasibility: How easy to build and operate (lower ops burden = higher)
+# - automation_friendly: Can it run mostly hands-off
+# - monetization_clarity: Clear path to revenue with defined customer

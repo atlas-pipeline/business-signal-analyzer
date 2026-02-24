@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Signal Analyzer</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+        }
+        header h1 { margin: 0; font-size: 24px; }
+        header p { margin: 5px 0 0; opacity: 0.9; font-size: 14px; }
+        
+        .nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        .nav a {
+            padding: 10px 20px;
+            background: white;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .nav a:hover { background: #e8e8e8; }
+        .nav a.active { background: #3498db; color: white; }
+        
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+        }
+        button {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover { background: #229954; }
+        button:disabled { background: #95a5a6; cursor: not-allowed; }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .result {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f6f3;
+            border-radius: 6px;
+            border-left: 4px solid #27ae60;
+        }
+        
+        .error {
+            background: #fadbd8;
+            border-left-color: #e74c3c;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-card h3 {
+            font-size: 24px;
+            color: #2c3e50;
+        }
+        .stat-card p {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        
+        .api-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .api-status.ok { background: #d5f4e6; color: #27ae60; }
+        .api-status.mock { background: #fef9e7; color: #f39c12; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Business Signal Analyzer</h1>
+            <p>Turn conversations and demand signals into ranked business ideas with evidence</p>
+        </header>
+        
+        <nav class="nav">
+            <a href="index.html" class="active">Ingest</a>
+            <a href="topics.html">Topics</a>
+            <a href="ideas.html">Ideas</a>
+            <a href="evidence.html">Evidence</a>
+        </nav>
+        
+        <div class="card">
+            <h2>📝 Paste Conversation or Notes</h2>
+            <p style="margin-bottom: 15px; color: #666; font-size: 14px;">
+                Paste customer conversations, user research, or any text containing pain points and needs.
+            </p>
+            <textarea id="conversationText" placeholder="Example:
+User: I spend hours every week chasing subcontractors for compliance documents.
+
+Me: What happens if they're late?
+
+User: Projects get delayed and I look bad to the client. It's stressful."></textarea>
+            <button onclick="submitConversation()" id="submitBtn">Analyze Conversation</button>
+            <div class="loading" id="loading">Processing...</div>
+            <div class="result" id="result"></div>
+        </div>
+        
+        <div class="card">
+            <h2>📁 Upload File (Optional)</h2>
+            <p style="color: #666; font-size: 14px; margin-bottom: 10px;">
+                Supported: .txt, .json, .csv
+            </p>
+            <input type="file" id="fileInput" accept=".txt,.json,.csv" style="margin-bottom: 10px;">
+            <br>
+            <button onclick="uploadFile()" id="uploadBtn">Upload & Analyze</button>
+        </div>
+        
+        <div class="card">
+            <h2>🔌 API Status</h2>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                <span class="api-status mock">Google Trends: Mock</span>
+                <span class="api-status mock">Reddit: Mock</span>
+                <span class="api-status ok">Hacker News: Live</span>
+                <span class="api-status mock">YouTube: Mock</span>
+            </div>
+            <p style="margin-top: 15px; font-size: 13px; color: #666;">
+                <strong>Mock mode:</strong> Running with synthetic data. To enable live data, add API keys to <code>config/.env</code>
+            </p>
+        </div>
+        
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-card">
+                <h3 id="statConvos">0</h3>
+                <p>Conversations</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="statTopics">0</h3>
+                <p>Topics</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="statIdeas">0</h3>
+                <p>Ideas</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        
+        async function submitConversation() {
+            const text = document.getElementById('conversationText').value.trim();
+            if (!text) {
+                alert('Please paste some text first');
+                return;
+            }
+            
+            const btn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            
+            btn.disabled = true;
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_BASE}/conversations`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: text,
+                        source_type: 'paste'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    result.innerHTML = `
+                        <strong>✅ Conversation analyzed!</strong><br>
+                        ID: ${data.id}<br>
+                        Messages extracted: ${data.message_count}<br>
+                        <br>
+                        <a href="topics.html?conv=${data.id}">View extracted topics →</a>
+                    `;
+                    result.classList.remove('error');
+                    loadStats();
+                } else {
+                    throw new Error(data.detail || 'Failed to analyze');
+                }
+            } catch (err) {
+                result.innerHTML = `<strong>Error:</strong> ${err.message}`;
+                result.classList.add('error');
+            } finally {
+                btn.disabled = false;
+                loading.style.display = 'none';
+                result.style.display = 'block';
+            }
+        }
+        
+        async function uploadFile() {
+            const input = document.getElementById('fileInput');
+            if (!input.files.length) {
+                alert('Please select a file');
+                return;
+            }
+            
+            alert('File upload not yet implemented. Please paste text directly.');
+        }
+        
+        async function loadStats() {
+            try {
+                const [convos, topics, ideas] = await Promise.all([
+                    fetch(`${API_BASE}/conversations?limit=1`).then(r => r.json()),
+                    fetch(`${API_BASE}/topics`).then(r => r.json()),
+                    fetch(`${API_BASE}/ideas`).then(r => r.json())
+                ]);
+                
+                document.getElementById('statConvos').textContent = convos.length;
+                document.getElementById('statTopics').textContent = topics.length;
+                document.getElementById('statIdeas').textContent = ideas.length;
+                document.getElementById('stats').style.display = 'grid';
+            } catch (e) {
+                console.error('Failed to load stats:', e);
+            }
+        }
+        
+        // Load stats on page load
+        loadStats();
+    </script>
+</body>
+</html>
