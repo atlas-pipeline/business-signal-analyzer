@@ -10,7 +10,7 @@ import requests
 import json
 import time
 
-API_BASE = "http://localhost:8000/api"
+API_BASE = "https://business-signal-analyzer.onrender.com/api"
 
 def demo():
     print("=" * 60)

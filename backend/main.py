@@ -29,6 +29,7 @@ from connectors.reddit import RedditConnector
 from connectors.hackernews import HackerNewsConnector
 from connectors.youtube import YouTubeConnector
 from scoring.engine import ScoringEngine
+from pipeline.reddit_scraper import RedditAutoScraper
 
 # Initialize
 app = FastAPI(title="Business Signal Analyzer", version="1.0.0")
@@ -95,6 +96,11 @@ class ScoreWeights(BaseModel):
     feasibility: float = 0.20
     automation_friendly: float = 0.10
     monetization_clarity: float = 0.10
+
+class RedditScrapeRequest(BaseModel):
+    subreddits: Optional[List[str]] = None
+    limit: int = 50
+    create_in_db: bool = True
 
 # Routes
 from fastapi.responses import HTMLResponse
@@ -399,6 +405,87 @@ async def update_scoring_weights(weights: ScoreWeights):
     scorer = ScoringEngine(weights_path)
     
     return {"status": "updated", "weights": new_weights}
+
+# Reddit Auto-Scraper endpoints
+@app.post("/api/scrape/reddit")
+async def scrape_reddit(request: RedditScrapeRequest):
+    """Auto-scrape Reddit for business pain points and create conversation."""
+    scraper = RedditAutoScraper(reddit_connector=reddit)
+    
+    # Scrape posts
+    posts = scraper.find_pain_posts(
+        subreddits=request.subreddits,
+        limit=request.limit
+    )
+    
+    if not posts:
+        return {
+            "status": "no_data",
+            "message": "No pain point posts found. Try different subreddits or time range.",
+            "subreddits_checked": request.subreddits or scraper.DEFAULT_SUBREDDITS
+        }
+    
+    # Extract topics
+    topics = scraper.extract_topics(posts)
+    
+    if not request.create_in_db:
+        # Return preview only
+        return {
+            "status": "preview",
+            "posts_found": len(posts),
+            "topics_extracted": len(topics),
+            "preview_posts": posts[:5],
+            "preview_topics": topics[:3]
+        }
+    
+    # Create conversation from aggregated posts
+    conversation_text = "\n\n".join([
+        f"Reddit user in r/{p['subreddit']} ({p['author']}): {p['title']}\n{p['text'][:400]}"
+        for p in posts[:15]
+    ])
+    
+    # Create in database
+    try:
+        text_hash = hashlib.sha256(conversation_text.encode()).hexdigest()
+        conv_id = create_conversation("reddit_auto_scrape", text_hash, conversation_text[:500])
+        
+        # Add messages
+        for p in posts[:15]:
+            msg_text = f"[{p['subreddit']}] {p['title']}\n{p['text'][:400]}"
+            create_message(conv_id, msg_text, speaker=f"reddit_user_{p['author']}")
+        
+        # Create topics in DB
+        topic_ids = []
+        for topic in topics[:5]:  # Top 5 topics
+            topic_id = create_topic(
+                conv_id,
+                topic['name'],
+                topic['description'],
+                topic['keywords']
+            )
+            topic_ids.append(topic_id)
+        
+        return {
+            "status": "success",
+            "conversation_id": conv_id,
+            "posts_found": len(posts),
+            "topics_created": len(topic_ids),
+            "topic_ids": topic_ids,
+            "subreddits": list(set(p['subreddit'] for p in posts)),
+            "next_step": f"Visit /topics.html?conv={conv_id} to view topics and collect demand signals"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@app.get("/api/scrape/reddit/subreddits")
+async def get_default_subreddits():
+    """Get list of default subreddits for scraping."""
+    scraper = RedditAutoScraper()
+    return {
+        "default_subreddits": scraper.DEFAULT_SUBREDDITS,
+        "pain_keywords": scraper.PAIN_KEYWORDS
+    }
 
 if __name__ == "__main__":
     import uvicorn

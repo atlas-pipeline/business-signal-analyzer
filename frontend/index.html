@@ -98,6 +98,26 @@
             border-left-color: #e74c3c;
         }
         
+        .scrape-btn {
+            background: #e67e22;
+            margin-top: 15px;
+        }
+        .scrape-btn:hover { background: #d35400; }
+        
+        .scrape-preview {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+        .scrape-post {
+            border-bottom: 1px solid #ddd;
+            padding: 10px 0;
+        }
+        .scrape-post:last-child { border-bottom: none; }
+        
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -169,6 +189,24 @@ User: Projects get delayed and I look bad to the client. It's stressful."></text
             <input type="file" id="fileInput" accept=".txt,.json,.csv" style="margin-bottom: 10px;">
             <br>
             <button onclick="uploadFile()" id="uploadBtn">Upload & Analyze</button>
+        </div>
+        
+        <div class="card">
+            <h2>🤖 Auto-Scrape Reddit</h2>
+            <p style="margin-bottom: 15px; color: #666; font-size: 14px;">
+                Automatically find pain point posts from Reddit communities and create topics.
+            </p>
+            <p style="font-size: 13px; color: #888; margin-bottom: 15px;">
+                Searches: r/startups, r/smallbusiness, r/entrepreneur, r/SaaS, r/SideProject
+            </p>
+            <button onclick="scrapeReddit()" id="scrapeBtn" class="scrape-btn">
+                🔍 Auto-Scrape Reddit for Pain Points
+            </button>
+            <div class="loading" id="scrapeLoading" style="margin-top: 15px;">
+                Scraping Reddit for pain point posts... (this may take 30-60 seconds)
+            </div>
+            <div class="result" id="scrapeResult"></div>
+            <div class="scrape-preview" id="scrapePreview" style="display: none;"></div>
         </div>
         
         <div class="card">
@@ -277,6 +315,72 @@ User: Projects get delayed and I look bad to the client. It's stressful."></text
                 document.getElementById('stats').style.display = 'grid';
             } catch (e) {
                 console.error('Failed to load stats:', e);
+            }
+        }
+        
+        async function scrapeReddit() {
+            const btn = document.getElementById('scrapeBtn');
+            const loading = document.getElementById('scrapeLoading');
+            const result = document.getElementById('scrapeResult');
+            const preview = document.getElementById('scrapePreview');
+            
+            btn.disabled = true;
+            loading.style.display = 'block';
+            result.style.display = 'none';
+            preview.style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_BASE}/scrape/reddit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        limit: 50,
+                        create_in_db: true
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    result.innerHTML = `
+                        <strong>✅ Reddit scraped successfully!</strong><br>
+                        Posts found: ${data.posts_found}<br>
+                        Topics created: ${data.topics_created}<br>
+                        Subreddits: ${data.subreddits.join(', ')}<br>
+                        <br>
+                        <a href="topics.html?conv=${data.conversation_id}">View Topics →</a>
+                    `;
+                    result.classList.remove('error');
+                    loadStats();
+                } else if (data.status === 'no_data') {
+                    result.innerHTML = `
+                        <strong>⚠️ No data found</strong><br>
+                        ${data.message}<br>
+                        Subreddits checked: ${data.subreddits_checked?.join(', ')}
+                    `;
+                    result.classList.add('error');
+                } else if (data.status === 'preview') {
+                    result.innerHTML = `<strong>Preview mode:</strong> Found ${data.posts_found} posts, ${data.topics_extracted} topics`;
+                    
+                    // Show preview
+                    preview.innerHTML = `
+                        <h3>Top Posts:</h3>
+                        ${data.preview_posts.map(p => `
+                            <div class="scrape-post">
+                                <strong>${p.title}</strong><br>
+                                <small>r/${p.subreddit} • ${p.score} upvotes • ${p.num_comments} comments</small>
+                            </div>
+                        `).join('')}
+                    `;
+                    preview.style.display = 'block';
+                }
+            } catch (err) {
+                result.innerHTML = `<strong>Error:</strong> ${err.message}`;
+                result.classList.add('error');
+            } finally {
+                btn.disabled = false;
+                loading.style.display = 'none';
+                result.style.display = 'block';
             }
         }
         
