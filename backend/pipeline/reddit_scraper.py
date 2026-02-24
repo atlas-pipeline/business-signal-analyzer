@@ -2,7 +2,7 @@
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 import re
-from .reddit import RedditConnector
+from ..connectors.reddit import RedditConnector
 
 class RedditAutoScraper:
     """Auto-scrape Reddit for business pain points and signals."""
