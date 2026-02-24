@@ -5,7 +5,7 @@ pydantic>=2.5.0
 python-multipart>=0.0.6
 
 # Database
-sqlite3  # Built-in
+# sqlite3 is built-in Python, no install needed
 
 # Data & APIs
 requests>=2.31.0
