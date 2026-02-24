@@ -123,26 +123,57 @@
                     : `${API_BASE}/topics`;
                 
                 const response = await fetch(endpoint);
+                
+                // Check for HTTP errors
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${response.status} - ${errorText.substring(0, 100)}`);
+                }
+                
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Expected JSON but got: ${text.substring(0, 100)}`);
+                }
+                
                 const topics = await response.json();
                 
                 const container = document.getElementById('topicsList');
                 
-                if (!topics.length) {
+                if (!Array.isArray(topics)) {
                     container.innerHTML = `
                         <div class="empty-state">
-                            <p>No topics yet. <a href="index.html">Analyze a conversation</a> to extract topics.</p>
+                            <p>Unexpected response format. Please try again.</p>
                         </div>
                     `;
                     return;
                 }
                 
-                container.innerHTML = topics.map(t => `
+                if (!topics.length) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <p>No topics yet. <a href="/">Analyze a conversation</a> to extract topics.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = topics.map(t => {
+                    // Safely parse keywords
+                    let keywords = [];
+                    try {
+                        keywords = JSON.parse(t.keywords || '[]');
+                    } catch (e) {
+                        keywords = [];
+                    }
+                    
+                    return `
                     <div class="topic-card" onclick="viewTopic(${t.id})">
                         <h3>${t.name}</h3>
                         <p>${t.description || 'No description'}</p>
                         <div class="meta">
-                            ${t.message_count} messages • 
-                            Keywords: ${JSON.parse(t.keywords || '[]').join(', ') || 'none'}
+                            ${t.message_count || 0} messages • 
+                            Keywords: ${keywords.join(', ') || 'none'}
                         </div>
                         <div style="margin-top: 10px;">
                             <button onclick="event.stopPropagation(); collectDemand(${t.id})">
@@ -153,12 +184,16 @@
                             </button>
                         </div>
                     </div>
-                `).join('');
+                `}).join('');
                 
             } catch (err) {
+                console.error('Error loading topics:', err);
                 document.getElementById('topicsList').innerHTML = `
                     <div class="empty-state">
-                        <p>Error loading topics: ${err.message}</p>
+                        <p><strong>Error loading topics:</strong> ${err.message}</p>
+                        <p style="font-size: 12px; margin-top: 10px;">
+                            <a href="/">Go back to Ingest</a> and try again.
+                        </p>
                     </div>
                 `;
             }
