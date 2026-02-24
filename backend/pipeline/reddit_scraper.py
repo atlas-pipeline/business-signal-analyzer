@@ -1,8 +1,14 @@
 """Reddit auto-scraper for business signal discovery."""
+import sys
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 import re
-from ..connectors.reddit import RedditConnector
+
+# Add backend to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from connectors.reddit import RedditConnector
 
 class RedditAutoScraper:
     """Auto-scrape Reddit for business pain points and signals."""
