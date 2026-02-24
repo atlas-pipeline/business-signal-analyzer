@@ -42,6 +42,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Serve static frontend files
+frontend_path = Path(__file__).parent.parent / "frontend"
+if frontend_path.exists():
+    app.mount("/static", StaticFiles(directory=str(frontend_path)), name="static")
+    print(f"✓ Serving frontend from {frontend_path}")
+
 # Initialize database on startup
 @app.on_event("startup")
 async def startup():
@@ -91,20 +97,37 @@ class ScoreWeights(BaseModel):
     monetization_clarity: float = 0.10
 
 # Routes
+from fastapi.responses import HTMLResponse
+
+def serve_html(filename: str) -> HTMLResponse:
+    """Helper to serve HTML files with API_BASE fix."""
+    file_path = frontend_path / filename
+    if file_path.exists():
+        with open(file_path, "r") as f:
+            content = f.read()
+            content = content.replace(
+                "const API_BASE = 'http://localhost:8000/api';",
+                "const API_BASE = '/api';"
+            )
+            return HTMLResponse(content=content)
+    return HTMLResponse(content=f"<h1>404</h1><p>{filename} not found</p>", status_code=404)
+
 @app.get("/")
 async def root():
-    return {
-        "app": "Business Signal Analyzer",
-        "version": "1.0.0",
-        "status": "running",
-        "endpoints": [
-            "/api/conversations",
-            "/api/topics",
-            "/api/demand",
-            "/api/ideas",
-            "/api/scoring/weights"
-        ]
-    }
+    """Serve the frontend index.html."""
+    return serve_html("index.html")
+
+@app.get("/topics.html")
+async def topics_page():
+    return serve_html("topics.html")
+
+@app.get("/ideas.html")
+async def ideas_page():
+    return serve_html("ideas.html")
+
+@app.get("/evidence.html")
+async def evidence_page():
+    return serve_html("evidence.html")
 
 @app.get("/api/health")
 async def health():
